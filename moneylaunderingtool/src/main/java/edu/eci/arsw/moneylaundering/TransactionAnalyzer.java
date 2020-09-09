@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class TransactionAnalyzer {
+	
     private HashMap<String, Integer> smallTransactionsPerAccount;
     private static final int LAUNDERING_LIMIT_AMOUNT = 1250;
     private static final int LAUNDERING_LIMIT_COUNT = 100;
@@ -37,5 +38,4 @@ public class TransactionAnalyzer {
     {
         return smallTransactionsPerAccount.entrySet().stream().filter(accountEntry-> accountEntry.getValue()>LAUNDERING_LIMIT_COUNT).map(Map.Entry::getKey).collect(Collectors.toList());
     }
-
 }

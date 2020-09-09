@@ -8,6 +8,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -15,31 +16,53 @@ import java.util.stream.Stream;
 public class MoneyLaundering
 {
     private TransactionAnalyzer transactionAnalyzer;
-    private TransactionReader transactionReader;
     private int amountOfFilesTotal;
-    private AtomicInteger amountOfFilesProcessed;
+    private static AtomicInteger amountOfFilesProcessed;
+    private int NUMTHREADS = 5;
+    private int div;
+    private int mod;
+    private static CopyOnWriteArrayList<MyThread> lista;
 
     public MoneyLaundering()
     {
         transactionAnalyzer = new TransactionAnalyzer();
-        transactionReader = new TransactionReader();
         amountOfFilesProcessed = new AtomicInteger();
     }
 
     public void processTransactionData()
     {
+    	
         amountOfFilesProcessed.set(0);
+        
         List<File> transactionFiles = getTransactionFileList();
         amountOfFilesTotal = transactionFiles.size();
-        for(File transactionFile : transactionFiles)
-        {            
-            List<Transaction> transactions = transactionReader.readTransactionsFromFile(transactionFile);
-            for(Transaction transaction : transactions)
-            {
-                transactionAnalyzer.addTransaction(transaction);
-            }
-            amountOfFilesProcessed.incrementAndGet();
+        
+        div = amountOfFilesTotal / NUMTHREADS;
+        mod = amountOfFilesTotal % NUMTHREADS;
+        
+        lista = new CopyOnWriteArrayList<MyThread>();
+        
+        boolean check = (mod == 0);
+        
+        if(check) {
+        	
+        	for (int i = 0; i < NUMTHREADS; i++) {
+        		lista.add(new MyThread(transactionFiles.subList(i * div, (i * div) + div)));
+        	}
+        } else {
+        	for (int j = 0; j < NUMTHREADS; j++) {
+        		if (j == NUMTHREADS - 1) {
+        			lista.add(new MyThread(transactionFiles.subList(j * div, div + mod + (j * div))));
+        		} else {
+        			lista.add(new MyThread(transactionFiles.subList(j * div, (j * div) + div)));
+        		}
+        	}
         }
+        
+        for (MyThread thread : lista) {
+        	thread.start();
+        }
+        
     }
 
     public List<String> getOffendingAccounts()
@@ -58,8 +81,7 @@ public class MoneyLaundering
         return csvFiles;
     }
 
-    public static void main(String[] args)
-    {
+    public static void main(String[] args) {
         MoneyLaundering moneyLaundering = new MoneyLaundering();
         Thread processingThread = new Thread(() -> moneyLaundering.processTransactionData());
         processingThread.start();
